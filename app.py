@@ -3,21 +3,41 @@ from flask_sockets import Sockets
 from utility.myDocker import ClientHandler, DockerStreamThread
 import conf
 
+from cryptography.fernet import Fernet
+import base64
+
+
 app = Flask(__name__)
 sockets = Sockets(app)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+@app.route('/hello')
+def hello_world():
+    return 'ping'
 
 @sockets.route('/echo')
 def echo_socket(ws):
-    dockerCli = ClientHandler(base_url=conf.DOCKER_HOST, timeout=10)
-    terminalExecId = dockerCli.creatTerminalExec(conf.CONTAINER_ID)
-    terminalStream = dockerCli.startTerminalExec(terminalExecId)._sock
+    token = ws.receive()
+    try:
+        f = Fernet(base64.b64encode(bytes(conf.SECRET_KEY, 'UTF-8')))
+        data = f.decrypt(bytes(token, 'UTF-8'), ttl=60).decode().split(':')
+    except:
+        data = []
+    if (len(data) != 2) or (not data[0] == 'conaiter_name'):
+        ws.send("Invalid token")
+        ws.close()
+        return
 
-    terminalThread = DockerStreamThread(ws, terminalStream)
-    terminalThread.start()
+    try:
+        dockerCli = ClientHandler(base_url=conf.DOCKER_HOST, timeout=10)
+        terminalExecId = dockerCli.creatTerminalExec(data[1])
+        terminalStream = dockerCli.startTerminalExec(terminalExecId)._sock
+
+        terminalThread = DockerStreamThread(ws, terminalStream)
+        terminalThread.start()
+    except:
+        ws.send("Cannot connect to container")
+        ws.close()
+        return
 
     while not ws.closed:
         message = ws.receive()
