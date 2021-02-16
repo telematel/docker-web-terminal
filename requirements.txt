@@ -1,4 +1,4 @@
 Flask==0.12.2
 Flask-Sockets
-docker==2.6.0
+docker==4.4.2
 cryptography
