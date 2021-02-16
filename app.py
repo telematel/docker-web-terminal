@@ -23,7 +23,7 @@ def echo_socket(ws):
     except:
         data = []
     if (len(data) != 2) or (not data[0] == 'conaiter_name'):
-        ws.send("Invalid token")
+        ws.send("Invalid token\n\r")
         ws.close()
         return
 
@@ -34,8 +34,8 @@ def echo_socket(ws):
 
         terminalThread = DockerStreamThread(ws, terminalStream)
         terminalThread.start()
-    except:
-        ws.send("Cannot connect to container")
+    except Exception as e:
+        ws.send("Cannot connect to container\n\rError: %s\n\r" % e)
         ws.close()
         return
 
