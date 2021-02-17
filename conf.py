@@ -1,2 +1,2 @@
-DOCKER_HOST = "tcp://192.168.4.22:2375"
-CONTAINER_ID = "5c6cdc3d77d3"
+SECRET_KEY = "a2b091666d7811eb94390242ac130002"
+DOCKER_HOST = "unix:///var/run/docker.sock"

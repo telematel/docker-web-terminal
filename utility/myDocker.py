@@ -10,7 +10,7 @@ class ClientHandler(object):
     def __init__(self, **kwargs):
         self.dockerClient = docker.APIClient(**kwargs)
 
-    def creatTerminalExec(self, containerId):
+    def creatTerminalExec(self, containerName):
         execCommand = [
             "/bin/sh",
             "-c",
@@ -19,7 +19,7 @@ class ClientHandler(object):
             "tty": True,
             "stdin": True
         }
-        execId = self.dockerClient.exec_create(containerId, execCommand, **execOptions)
+        execId = self.dockerClient.exec_create(containerName, execCommand, **execOptions)
         return execId["Id"]
 
     def startTerminalExec(self, execId):
