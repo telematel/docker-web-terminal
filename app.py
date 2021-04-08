@@ -28,7 +28,7 @@ def echo_socket(ws):
         return
 
     try:
-        dockerCli = ClientHandler(base_url=conf.DOCKER_HOST, timeout=10)
+        dockerCli = ClientHandler(base_url=conf.DOCKER_HOST, timeout=100)
         terminalExecId = dockerCli.creatTerminalExec(data[1])
         terminalStream = dockerCli.startTerminalExec(terminalExecId)._sock
 
@@ -43,6 +43,34 @@ def echo_socket(ws):
         message = ws.receive()
         if message is not None:
             terminalStream.send(bytes(message, encoding='utf-8'))
+
+@sockets.route('/logs')
+def logs_socket(ws):
+    token = ws.receive()
+    try:
+        f = Fernet(base64.b64encode(bytes(conf.SECRET_KEY, 'UTF-8')))
+        data = f.decrypt(bytes(token, 'UTF-8'), ttl=60).decode().split(':')
+    except:
+        data = []
+    if (len(data) != 2) or (not data[0] == 'conaiter_name'):
+        ws.send("Invalid token\n\r")
+        ws.close()
+        return
+    try:
+        dockerCli = ClientHandler(base_url=conf.DOCKER_HOST).dockerClient
+        container_socket = dockerCli.attach_socket(data[1], {'stream': True, "stdout": True, "stderr": True, "logs": True, "tail": 10})._sock
+        logsThread = DockerStreamThread(ws, container_socket)
+        logsThread.start()
+    except Exception as e:
+        ws.send("Cannot connect to container\n\rError: %s\n\r" % e)
+        ws.close()
+        return
+    while not ws.closed:
+        #message = ws.receive()
+        #if message is not None:
+        #    container_socket.send(bytes(message, encoding='utf-8'))
+        continue
+    
 
 if __name__ == '__main__':
     from gevent import pywsgi
