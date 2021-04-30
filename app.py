@@ -58,22 +58,22 @@ def logs_socket(ws):
         return
     try:
         dockerCli = ClientHandler(base_url=conf.DOCKER_HOST).dockerClient
-        container_socket = dockerCli.attach_socket(data[1], {'stream': True, "stdout": True, "stderr": True, "logs": True, "tail": 10})._sock
-        logsThread = DockerStreamThread(ws, container_socket)
-        logsThread.start()
+        container_stream = dockerCli.logs(data[1], stream=True, follow=True)
     except Exception as e:
         ws.send("Cannot connect to container\n\rError: %s\n\r" % e)
         ws.close()
         return
+    allline = ''
     while not ws.closed:
-        #message = ws.receive()
-        #if message is not None:
-        #    container_socket.send(bytes(message, encoding='utf-8'))
-        continue
-    
-
-if __name__ == '__main__':
-    from gevent import pywsgi
-    from geventwebsocket.handler import WebSocketHandler
-    server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
-    server.serve_forever()
+        try:
+            line = next(container_stream).decode("utf-8")
+            if line != '\n':
+                allline += line
+            else:
+                allline += line
+                ws.send(allline)
+                allline = ''
+        except Exception as e:
+            ws.send('\nHa ocurrido un problema: %s\n' % e)
+            ws.close()
+            return
